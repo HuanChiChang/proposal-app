@@ -312,12 +312,11 @@ function generateProposalPDF(data, imageFiles) {
 }
 
 // ── 啟動 ──
-ensureFonts()
-  .then(() => {
-    console.log('✅ 字型就緒');
-    app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
-  })
-  .catch(err => {
-    console.error('⚠️  字型下載失敗：', err.message);
-    app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
-  });
+// 先啟動讓 healthcheck 通過，字型在背景下載
+let fontsReady = false;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+  ensureFonts()
+    .then(() => { fontsReady = true; console.log('✅ 字型就緒'); })
+    .catch(err => { fontsReady = true; console.error('⚠️ 字型下載失敗：', err.message); });
+});
