@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>提案產生系統</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #0f0f11; min-height: 100vh; color: #e8e4dc; }
+  .brand { font-family: 'DM Serif Display', serif; }
+  .bg-grid {
+    background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .drop-zone { border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(255,255,255,0.025); transition: all 0.2s ease; cursor: pointer; }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: #c8a96e; background: rgba(200,169,110,0.06); }
+  .drop-zone.has-file { border-color: rgba(100,200,150,0.5); background: rgba(100,200,150,0.05); }
+  .img-drop-zone { border: 1.5px dashed rgba(255,255,255,0.15); background: rgba(255,255,255,0.025); transition: all 0.2s ease; cursor: pointer; }
+  .img-drop-zone:hover, .img-drop-zone.drag-over { border-color: #7b9ccc; background: rgba(123,156,204,0.06); }
+  .input-field { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #e8e4dc; transition: border-color 0.2s, background 0.2s; outline: none; }
+  .input-field::placeholder { color: rgba(255,255,255,0.3); }
+  .input-field:focus { border-color: #c8a96e; background: rgba(200,169,110,0.04); }
+  .btn-primary { background: #c8a96e; color: #0f0f11; font-weight: 700; letter-spacing: 0.05em; transition: all 0.2s; }
+  .btn-primary:hover:not(:disabled) { background: #d4ba85; transform: translateY(-1px); }
+  .btn-primary:disabled { background: rgba(200,169,110,0.3); color: rgba(15,15,17,0.5); cursor: not-allowed; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #c8a96e, #d4ba85); transition: width 0.4s ease; border-radius: 9999px; }
+  .tag { background: rgba(255,255,255,0.07); border: 0.5px solid rgba(255,255,255,0.12); font-size: 11px; padding: 2px 8px; border-radius: 4px; color: rgba(255,255,255,0.6); }
+  .preview-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 0.5px solid rgba(255,255,255,0.1); }
+  .remove-btn { width: 18px; height: 18px; background: rgba(200,80,80,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; color: white; position: absolute; top: -5px; right: -5px; }
+  .remove-btn:hover { background: rgba(220,60,60,0.9); }
+  .section-label { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.35); font-weight: 500; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15); transition: background 0.3s; }
+  .step-dot.active { background: #c8a96e; }
+  .step-dot.done { background: rgba(100,200,150,0.6); }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  .fade-in { animation: fadeIn 0.35s ease forwards; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { width:18px; height:18px; border:2px solid rgba(15,15,17,0.3); border-top-color:#0f0f11; border-radius:50%; animation: spin 0.7s linear infinite; display:inline-block; vertical-align:middle; margin-right:8px; }
+</style>
+</head>
+<body class="bg-grid">
+<div class="min-h-screen flex flex-col">
+  <header class="border-b border-white/5 px-8 py-5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-md bg-amber-500/20 flex items-center justify-center">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="1" width="6" height="6" rx="1.5" fill="#c8a96e"/>
+          <rect x="9" y="1" width="6" height="6" rx="1.5" fill="#c8a96e" opacity="0.5"/>
+          <rect x="1" y="9" width="6" height="6" rx="1.5" fill="#c8a96e" opacity="0.5"/>
+          <rect x="9" y="9" width="6" height="6" rx="1.5" fill="#c8a96e" opacity="0.3"/>
+        </svg>
+      </div>
+      <span class="brand text-lg tracking-wide text-white/90">Proposa<em>l</em></span>
+    </div>
+    <span class="tag">Beta v0.1</span>
+  </header>
+
+  <main class="flex-1 flex items-start justify-center px-4 py-12">
+    <div class="w-full max-w-2xl fade-in">
+      <div class="mb-10">
+        <p class="section-label mb-3">新建提案</p>
+        <h1 class="brand text-3xl text-white/90 leading-tight">上傳設計素材<br><span style="color:#c8a96e">產生專業提案</span></h1>
+      </div>
+
+      <div class="flex items-center gap-2 mb-10">
+        <div class="step-dot active" id="dot1"></div>
+        <div class="h-px flex-1 bg-white/8"></div>
+        <div class="step-dot" id="dot2"></div>
+        <div class="h-px flex-1 bg-white/8"></div>
+        <div class="step-dot" id="dot3"></div>
+      </div>
+
+      <div class="flex flex-col gap-6">
+        <!-- PDF -->
+        <div>
+          <p class="section-label mb-3">設計說明書 <span style="color:rgba(200,169,110,0.6)">PDF</span></p>
+          <div class="drop-zone rounded-xl p-8 text-center" id="pdfZone"
+            onclick="document.getElementById('pdfInput').click()"
+            ondragover="handleDragOver(event,'pdfZone')"
+            ondragleave="handleDragLeave('pdfZone')"
+            ondrop="handlePdfDrop(event)">
+            <input type="file" id="pdfInput" accept=".pdf" class="hidden" onchange="handlePdfSelect(event)">
+            <div id="pdfPlaceholder">
+              <svg class="mx-auto mb-3 opacity-30" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/><line x1="12" y1="12" x2="12" y2="18"/><polyline points="9,15 12,12 15,15"/>
+              </svg>
+              <p class="text-sm text-white/40">拖曳 PDF 至此，或 <span style="color:#c8a96e">點擊選擇</span></p>
+              <p class="text-xs text-white/20 mt-1">僅支援 .pdf 格式，最大 50MB</p>
+            </div>
+            <div id="pdfPreview" class="hidden items-center gap-3 justify-center">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8a96e" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+              </svg>
+              <span id="pdfName" class="text-sm text-white/80 truncate max-w-xs"></span>
+              <button onclick="removePdf(event)" class="text-xs text-white/30 hover:text-red-400 transition-colors ml-2">移除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Images -->
+        <div>
+          <p class="section-label mb-3">設計圖片 <span style="color:rgba(123,156,204,0.7)">JPG / PNG</span></p>
+          <div class="img-drop-zone rounded-xl p-6" id="imgZone"
+            ondragover="handleDragOver(event,'imgZone')"
+            ondragleave="handleDragLeave('imgZone')"
+            ondrop="handleImgDrop(event)">
+            <input type="file" id="imgInput" accept=".jpg,.jpeg,.png" multiple class="hidden" onchange="handleImgSelect(event)">
+            <div id="imgPlaceholder" class="text-center cursor-pointer" onclick="document.getElementById('imgInput').click()">
+              <svg class="mx-auto mb-3 opacity-30" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/>
+              </svg>
+              <p class="text-sm text-white/40">拖曳圖片至此，或 <span style="color:#7b9ccc">點擊選擇</span></p>
+              <p class="text-xs text-white/20 mt-1">可一次上傳多張，僅支援 JPG / PNG</p>
+            </div>
+            <div id="imgPreviews" class="flex flex-wrap gap-3"></div>
+            <div id="imgAddMore" class="hidden mt-3">
+              <button onclick="document.getElementById('imgInput').click()" class="text-xs px-3 py-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all">+ 新增更多圖片</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Designer -->
+        <div>
+          <p class="section-label mb-3">設計師資訊</p>
+          <input type="text" id="designerName" placeholder="請輸入設計師姓名" class="input-field w-full rounded-xl px-4 py-3 text-sm" oninput="updateSubmitState()">
+        </div>
+
+        <!-- Progress -->
+        <div id="progressSection" class="hidden">
+          <div class="rounded-xl border border-white/8 p-5" style="background:rgba(255,255,255,0.02)">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-sm text-white/60" id="progressLabel">準備中...</p>
+              <p class="text-sm font-medium" style="color:#c8a96e" id="progressPercent">0%</p>
+            </div>
+            <div class="h-1.5 rounded-full" style="background:rgba(255,255,255,0.07)">
+              <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div><p class="text-xs text-white/30 mb-0.5">PDF</p><div id="statusPdf" class="text-xs text-white/20">等待中</div></div>
+              <div><p class="text-xs text-white/30 mb-0.5">圖片</p><div id="statusImg" class="text-xs text-white/20">等待中</div></div>
+              <div><p class="text-xs text-white/30 mb-0.5">AI 分析</p><div id="statusAi" class="text-xs text-white/20">等待中</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div id="errorBox" class="hidden rounded-xl border border-red-500/30 bg-red-500/5 px-4 py-3">
+          <p class="text-sm text-red-400" id="errorMsg"></p>
+        </div>
+
+        <button id="submitBtn" class="btn-primary w-full rounded-xl py-4 text-sm tracking-widest" disabled onclick="startGenerate()">
+          產生提案
+        </button>
+        <p class="text-center text-xs text-white/20">上傳檔案將安全加密傳輸，不會儲存至第三方</p>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+let pdfFile = null, imgFiles = [];
+
+function handleDragOver(e, id) { e.preventDefault(); document.getElementById(id).classList.add('drag-over'); }
+function handleDragLeave(id) { document.getElementById(id).classList.remove('drag-over'); }
+
+function handlePdfDrop(e) {
+  e.preventDefault(); handleDragLeave('pdfZone');
+  const f = [...e.dataTransfer.files].find(f => f.type === 'application/pdf');
+  if (f) setPdfFile(f);
+}
+function handlePdfSelect(e) { if (e.target.files[0]) setPdfFile(e.target.files[0]); }
+function setPdfFile(f) {
+  pdfFile = f;
+  document.getElementById('pdfPlaceholder').classList.add('hidden');
+  const p = document.getElementById('pdfPreview');
+  p.classList.remove('hidden'); p.classList.add('flex');
+  document.getElementById('pdfName').textContent = f.name;
+  document.getElementById('pdfZone').classList.add('has-file');
+  document.getElementById('dot1').classList.add('done');
+  updateSubmitState();
+}
+function removePdf(e) {
+  e.stopPropagation(); pdfFile = null;
+  document.getElementById('pdfPlaceholder').classList.remove('hidden');
+  const p = document.getElementById('pdfPreview');
+  p.classList.add('hidden'); p.classList.remove('flex');
+  document.getElementById('pdfZone').classList.remove('has-file');
+  document.getElementById('dot1').classList.remove('done');
+  document.getElementById('pdfInput').value = '';
+  updateSubmitState();
+}
+function handleImgDrop(e) {
+  e.preventDefault(); handleDragLeave('imgZone');
+  const files = [...e.dataTransfer.files].filter(f => /image\/(jpeg|png)/.test(f.type));
+  if (files.length) addImgFiles(files);
+}
+function handleImgSelect(e) { addImgFiles([...e.target.files]); e.target.value = ''; }
+function addImgFiles(files) {
+  imgFiles = [...imgFiles, ...files]; renderImgPreviews();
+  if (imgFiles.length) document.getElementById('dot2').classList.add('done');
+  updateSubmitState();
+}
+function removeImg(i) {
+  imgFiles.splice(i, 1); renderImgPreviews();
+  if (!imgFiles.length) document.getElementById('dot2').classList.remove('done');
+  updateSubmitState();
+}
+function renderImgPreviews() {
+  const c = document.getElementById('imgPreviews');
+  const ph = document.getElementById('imgPlaceholder');
+  const add = document.getElementById('imgAddMore');
+  if (!imgFiles.length) { c.innerHTML = ''; ph.classList.remove('hidden'); add.classList.add('hidden'); return; }
+  ph.classList.add('hidden'); add.classList.remove('hidden');
+  c.innerHTML = imgFiles.map((f, i) =>
+    `<div style="position:relative;display:inline-block">
+      <img src="${URL.createObjectURL(f)}" class="preview-thumb" title="${f.name}">
+      <div class="remove-btn" onclick="removeImg(${i})">✕</div>
+    </div>`
+  ).join('');
+}
+function updateSubmitState() {
+  const ready = pdfFile && document.getElementById('designerName').value.trim();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = !ready;
+  if (ready) document.getElementById('dot3').classList.add('active');
+  else document.getElementById('dot3').classList.remove('active');
+}
+
+function setProgress(pct, label, pdf, img, ai) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPercent').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+  const style = (el, txt) => {
+    el.textContent = txt;
+    el.style.color = txt.startsWith('✓') ? 'rgba(100,200,150,0.8)' : txt === '等待中' ? 'rgba(255,255,255,0.2)' : '#c8a96e';
+  };
+  style(document.getElementById('statusPdf'), pdf);
+  style(document.getElementById('statusImg'), img);
+  style(document.getElementById('statusAi'), ai);
+}
+
+async function startGenerate() {
+  document.getElementById('errorBox').classList.add('hidden');
+  document.getElementById('progressSection').classList.remove('hidden');
+  document.getElementById('submitBtn').disabled = true;
+  document.getElementById('submitBtn').innerHTML = '<span class="spinner"></span>產生中...';
+
+  setProgress(15, '上傳 PDF...', '上傳中', '等待中', '等待中');
+
+  const formData = new FormData();
+  formData.append('pdf', pdfFile);
+  formData.append('designerName', document.getElementById('designerName').value.trim());
+  imgFiles.forEach(f => formData.append('images', f));
+
+  setProgress(35, '上傳圖片...', '✓ 完成', '上傳中', '等待中');
+
+  try {
+    // Simulate upload progress while waiting
+    setTimeout(() => setProgress(55, 'Claude AI 分析中...', '✓ 完成', '✓ 完成', '分析中'), 800);
+    setTimeout(() => setProgress(75, '產生提案內容...', '✓ 完成', '✓ 完成', '生成中'), 2500);
+
+    const res = await fetch('/api/generate', { method: 'POST', body: formData });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || '伺服器錯誤');
+    }
+
+    setProgress(100, '✓ 提案產生完成！', '✓ 完成', '✓ 完成', '✓ 完成');
+    document.getElementById('progressLabel').style.color = 'rgba(100,200,150,0.9)';
+
+    // Download PDF
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `proposal_${document.getElementById('designerName').value.trim()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    document.getElementById('submitBtn').innerHTML = '✓ 已下載提案 PDF';
+    document.getElementById('submitBtn').style.background = 'rgba(100,200,150,0.2)';
+    document.getElementById('submitBtn').style.color = 'rgba(100,200,150,0.9)';
+    document.getElementById('submitBtn').style.border = '1px solid rgba(100,200,150,0.3)';
+
+  } catch (err) {
+    document.getElementById('errorBox').classList.remove('hidden');
+    document.getElementById('errorMsg').textContent = '錯誤：' + err.message;
+    document.getElementById('progressSection').classList.add('hidden');
+    document.getElementById('submitBtn').disabled = false;
+    document.getElementById('submitBtn').innerHTML = '重新產生提案';
+  }
+}
+</script>
+</body>
+</html>
